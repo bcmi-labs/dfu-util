@@ -394,9 +394,15 @@ found_dfu:
 				}
 				pdfu->bMaxPacketSize0 = desc->bMaxPacketSize0;
 
-				/* queue into list */
-				pdfu->next = dfu_root;
-				dfu_root = pdfu;
+				/* append to list */
+				if (!dfu_root) {
+					dfu_root = pdfu;
+				} else {
+					struct dfu_if *last = dfu_root;
+					while (last->next)
+						last = last->next;
+					last->next = pdfu;
+				}
 			}
 		}
 		libusb_free_config_descriptor(cfg);
