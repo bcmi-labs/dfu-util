@@ -80,7 +80,7 @@ void free_segment_list(struct memsegment *segment_list)
 }
 
 /* Parse memory map from interface descriptor string
- * encoded as per ST document UM0424 section 4.3.2.
+ * encoded as per ST document UM0424 section 10.3.2.
  */
 struct memsegment *parse_memory_layout(char *intf_desc)
 {

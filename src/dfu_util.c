@@ -278,12 +278,14 @@ found_dfu:
 
 				intf = &uif->altsetting[alt_idx];
 
+				/* DFU subclass */
 				if (intf->bInterfaceClass != 0xfe ||
 				    intf->bInterfaceSubClass != 1)
 					continue;
 
 				dfu_mode = (intf->bInterfaceProtocol == 2);
-				/* e.g. DSO Nano has bInterfaceProtocol 0 instead of 2 */
+
+				/* ST DfuSe devices often use bInterfaceProtocol 0 instead of 2 */
 				if (func_dfu.bcdDFUVersion == 0x011a && intf->bInterfaceProtocol == 0)
 					dfu_mode = 1;
 
