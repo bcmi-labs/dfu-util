@@ -210,7 +210,7 @@ static void print_version(void)
 	       "Please report bugs to " PACKAGE_BUGREPORT "\n\n");
 }
 
-static struct option opts[] = {
+static const struct option opts[] = {
 	{ "help", 0, 0, 'h' },
 	{ "version", 0, 0, 'V' },
 	{ "verbose", 0, 0, 'v' },
