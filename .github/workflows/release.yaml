@@ -1,0 +1,74 @@
+name: release
+
+on:
+  push:
+
+jobs:
+  build:
+    name: build (${{ matrix.config.os }}, ${{ matrix.config.arch }})
+    runs-on: ubuntu-latest
+    env:
+      LIBUSB_DIR: /opt/lib/libusb-1.0.20/libusb/
+    strategy:
+      matrix:
+        config:
+          - os: linux
+            arch: amd64
+            cross_compile: x86_64-ubuntu16.04-linux-gnu
+          - os: linux
+            arch: 386
+            cross_compile: i686-ubuntu16.04-linux-gnu
+          - os: linux
+            arch: arm
+            cross_compile: arm-linux-gnueabihf
+          - os: linux
+            arch: arm64
+            cross_compile: aarch64-linux-gnu
+          - os: darwin
+            arch: amd64
+            cross_compile: x86_64-apple-darwin13
+            cross_compiler: o64-clang
+          - os: windows
+            arch: 386
+            cross_compile: i686-w64-mingw32
+            extension: .exe
+
+    container:
+      image: ghcr.io/arduino/crossbuild:0.2.2
+
+    steps:
+      - name: Checkout dfu-util repository
+        uses: actions/checkout@v3
+        with:
+          repository: bcmi-labs/dfu-util
+          path: dfu-util
+
+      - name: Set env vars
+        run: echo "BASE_DIR=/opt/lib/${{ matrix.config.cross_compile }}/" >> $GITHUB_ENV
+
+      - name: Set env var for win
+        run: echo "CFLAGS="-mno-ms-bitfields -static $CFLAGS"" >> $GITHUB_ENV
+        if: matrix.config.os == 'windows'
+
+      - name: Set env var for linux
+        run: echo "CFLAGS="-static $CFLAGS"" >> $GITHUB_ENV
+        if: matrix.config.os == 'linux'
+
+      - name: Build dfu-util
+        run: |
+          cd $GITHUB_WORKSPACE/dfu-util
+          ./autogen.sh
+          if [ "${{ matrix.config.os }}" = "darwin" ]; then
+            o64-clang -v 2>&1 | grep Target | awk {'print $2'} | sed 's/[.].*//g'
+            CC=o64-clang USB_CFLAGS="-mmacosx-version-min=10.12 -I$BASE_DIR/include/libusb-1.0" USB_LIBS="-L$BASE_DIR/lib/ -lusb-1.0 -lobjc -framework IOKit -framework CoreFoundation -framework Security" ./configure --host=${{ matrix.config.cross_compile }}
+          else
+            USB_CFLAGS="-I$BASE_DIR/include/libusb-1.0" USB_LIBS="-L$BASE_DIR/lib/ -lusb-1.0 -lpthread" ./configure --host=${{ matrix.config.cross_compile }}
+          fi
+          make
+          mv src/dfu-util${{ matrix.config.extension }} /tmp/
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: tools_${{matrix.config.os}}_${{matrix.config.arch}}
+          path: |
+            /tmp/dfu-util${{ matrix.config.extension }}
