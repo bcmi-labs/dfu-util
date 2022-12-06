@@ -231,6 +231,7 @@ static const struct option opts[] = {
 	{ "upload-size", 1, 0, 'Z' },
 	{ "download", 1, 0, 'D' },
 	{ "reset", 0, 0, 'R' },
+	{ "final-detach", 0, 0, 'Q' },
 	{ "dfuse-address", 1, 0, 's' },
 	{ "devnum",1, 0, 'n' },
 	{ "wait", 1, 0, 'w' },
@@ -247,6 +248,7 @@ int main(int argc, char **argv)
 	struct dfu_file file;
 	char *end;
 	int final_reset = 0;
+	int final_detach = 0;
 	int wait_device = 0;
 	int ret;
 	int dfuse_device = 0;
@@ -263,7 +265,7 @@ int main(int argc, char **argv)
 
 	while (1) {
 		int c, option_index = 0;
-		c = getopt_long(argc, argv, "hVvleE:d:p:c:i:a:S:t:U:D:Rs:Z:wn:", opts,
+		c = getopt_long(argc, argv, "hVvleE:d:p:c:i:a:S:t:U:D:R:Qs:Z:wn:", opts,
 				&option_index);
 		if (c == -1)
 			break;
@@ -336,6 +338,9 @@ int main(int argc, char **argv)
 			break;
 		case 'R':
 			final_reset = 1;
+			break;
+		case 'Q':
+			final_detach = 1;
 			break;
 		case 's':
 			dfuse_options = optarg;
@@ -769,18 +774,20 @@ status_again:
 		break;
 	}
 
-	if (!ret && final_reset) {
+	if (!ret && (final_reset || final_detach)) {
 		ret = dfu_detach(dfu_root->dev_handle, dfu_root->interface, 1000);
 		if (ret < 0) {
 			/* Even if detach failed, just carry on to leave the
                            device in a known state */
 			warnx("can't detach");
 		}
-		printf("Resetting USB to switch back to Run-Time mode\n");
-		ret = libusb_reset_device(dfu_root->dev_handle);
-		if (ret < 0 && ret != LIBUSB_ERROR_NOT_FOUND) {
-			warnx("error resetting after download: %s", libusb_error_name(ret));
-			ret = EX_IOERR;
+		if (final_reset) {
+			printf("Resetting USB to switch back to Run-Time mode\n");
+			ret = libusb_reset_device(dfu_root->dev_handle);
+			if (ret < 0 && ret != LIBUSB_ERROR_NOT_FOUND) {
+				warnx("error resetting after download: %s", libusb_error_name(ret));
+				ret = EX_IOERR;
+			}
 		}
 	}
 
