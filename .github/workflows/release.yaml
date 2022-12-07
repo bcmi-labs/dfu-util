@@ -1,5 +1,10 @@
 name: release
 
+env:
+  # The name of the project
+  PROJECT_NAME: dfu-util
+  PROJECT_VERSION: 0.11-arduino5
+
 on:
   push:
 
@@ -57,7 +62,7 @@ jobs:
       - name: Build dfu-util
         run: |
           cd $GITHUB_WORKSPACE/dfu-util
-          sed -i s/0.11-dev/0.11-arduino4/g configure.ac
+          sed -i s/0.11-dev/${{env.PROJECT_VERSION}}/g configure.ac
           ./autogen.sh
           if [ "${{ matrix.config.os }}" = "darwin" ]; then
             o64-clang -v 2>&1 | grep Target | awk {'print $2'} | sed 's/[.].*//g'
@@ -66,10 +71,19 @@ jobs:
             USB_CFLAGS="-I$BASE_DIR/include/libusb-1.0" USB_LIBS="-L$BASE_DIR/lib/ -lusb-1.0 -lpthread" ./configure --host=${{ matrix.config.cross_compile }}
           fi
           make
-          mv src/dfu-util${{ matrix.config.extension }} /tmp/
+
+      - name: Package
+        run: |
+          cd $GITHUB_WORKSPACE/dfu-util
+          mkdir ${{matrix.config.os}}_${{matrix.config.arch}}/
+          mv src/dfu-util${{ matrix.config.extension }} ${{matrix.config.os}}_${{matrix.config.arch}}/
+          chmod +x ${{matrix.config.os}}_${{matrix.config.arch}}/*
+          tar czv ${{matrix.config.os}}_${{matrix.config.arch}} -f ${{env.PROJECT_NAME}}-${{env.PROJECT_VERSION}}-${{ matrix.config.os }}_${{ matrix.config.arch }}.tar.gz
+          mv ${{env.PROJECT_NAME}}-${{env.PROJECT_VERSION}}-${{ matrix.config.os }}_${{ matrix.config.arch }}.tar.gz /tmp/
+
       - name: Upload artifacts
         uses: actions/upload-artifact@v3
         with:
-          name: tools_${{matrix.config.os}}_${{matrix.config.arch}}
+          name: ${{env.PROJECT_NAME}}-${{env.PROJECT_VERSION}}-${{ matrix.config.os }}_${{ matrix.config.arch }}.tar.gz
           path: |
-            /tmp/dfu-util${{ matrix.config.extension }}
+            /tmp/${{env.PROJECT_NAME}}-${{env.PROJECT_VERSION}}-${{ matrix.config.os }}_${{ matrix.config.arch }}.tar.gz
