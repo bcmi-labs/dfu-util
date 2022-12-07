@@ -57,6 +57,7 @@ jobs:
       - name: Build dfu-util
         run: |
           cd $GITHUB_WORKSPACE/dfu-util
+          sed -i s/0.11-dev/0.11-arduino4/g configure.ac
           ./autogen.sh
           if [ "${{ matrix.config.os }}" = "darwin" ]; then
             o64-clang -v 2>&1 | grep Target | awk {'print $2'} | sed 's/[.].*//g'
